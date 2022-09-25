@@ -1,29 +1,103 @@
-# import the JSON utility package since we will be working with a JSON object
 import json
-# import the AWS SDK (for Python the package name is boto3)
 import boto3
-# import two packages to help us with dates and date formatting
 from time import gmtime, strftime
 
-# create a DynamoDB object using the AWS SDK
-dynamodb = boto3.resource('dynamodb')
-# use the DynamoDB object to select our table
-table = dynamodb.Table('Loyalty_Stamps')
-# store the current time in a human readable format in a variable
+dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
+table = dynamodb.Table('StampInfo')
 now = strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
 
-# define the handler function that the Lambda service will use an entry point
 def lambda_handler(event, context):
-# extract values from the event object we got from the Lambda service
-    name = event['firstName'] +' '+ event['lastName']
-    # write name and time to the DynamoDB table using the object we instantiated and save response in a variable
-    response = table.put_item(
+    # extract data from request
+    request_type = event['requestType']
+    store_id = event['storeId']
+    customer_id = event['customerId']
+
+    response = {}
+
+    # call function based on request type
+    if request_type == "getStamps": 
+        response = get_stamps(store_id, customer_id)
+    elif request_type ==  "addStamps":
+        number_of_stamps = event['numberOfStamps']
+        response = add_stamps(store_id, customer_id, number_of_stamps)
+    elif request_type ==   "resetStamps":
+        response = reset_stamps(store_id, customer_id)
+    elif request_type ==   "deleteStamps":
+        number_of_stamps = event['numberOfStamps']
+        response = delete_stamps(store_id, customer_id, number_of_stamps)
+    elif request_type ==   "setupCustomer":
+        customer_name = event['customerName']
+        response = setupCustomer(store_id, customer_name)
+
+    return response
+
+def get_stamps(store_id, customer_id):
+    """
+    Gets stamp data from table for a store-customer pair
+
+    :param store_id: The StoreId of the store
+    :param customer_id: The CustomerId of the customer
+    :return: TBD
+    """
+    return {}
+
+def add_stamps(store_id, customer_id, number_of_stamps):
+    """
+    Adds stamps for a store-customer pair if the pair exists. Creates the pair if it does not exist
+
+    :param store_id: The StoreId of the store
+    :param customer_id: The CustomerId of the customer
+    :param number_of_stamps: The number of stamps to add
+    :return: TBD
+    """
+    get_response = table.get_item(Key={'StoreId': store_id, 'CustomerId': customer_id})
+
+    if 'Item' in get_response:
+        current_stamps = int(get_response['Item']['Stamps'])
+        update_response = table.update_item(
+            Key={'StoreId': store_id, 'CustomerId': customer_id},
+            UpdateExpression="set Stamps = Stamps + :val",
+            ExpressionAttributeValues={':val': number_of_stamps},
+            ReturnValues="UPDATED_NEW")
+    else:
+        put_response = table.put_item(
         Item={
-            'ID': name,
-            'LatestGreetingTime':now
+            'StoreId': store_id,
+            'CustomerId': customer_id,
+            'Stamps': number_of_stamps
             })
-# return a properly formatted JSON object
     return {
     'statusCode': 200,
-    'body': json.dumps('Hello from Lambda, ' + name + '. This has been integrated with Github')
+    'body': json.dumps('Sucessfully added ' + str(number_of_stamps) + ' stamps for StoreId: ' + store_id + ' and CustomerId: ' + customer_id)
     }
+
+def reset_stamps(store_id, customer_id):
+    """
+    Resets number of stamps to 0 for a store-customer pair
+
+    :param store_id: The StoreId of the store
+    :param customer_id: The CustomerId of the customer
+    :return: TBD
+    """
+    return {}
+
+def delete_stamps(store_id, customer_id, number_of_stamps):
+    """
+    Deletes stamps for a store-customer pair
+
+    :param store_id: The StoreId of the store
+    :param customer_id: The CustomerId of the customer
+    :param number_of_stamps: The number of stamps to add
+    :return: TBD
+    """
+    return {}
+
+# For local testing
+if __name__ == '__main__':
+    event = {
+        'requestType': 'addStamps',
+        'storeId': '12345',
+        'customerId': '54312',
+        'numberOfStamps': 1
+    }
+    print(lambda_handler(event, None))
