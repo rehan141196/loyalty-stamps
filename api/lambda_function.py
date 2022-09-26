@@ -11,8 +11,17 @@ def lambda_handler(event, context):
     request_type = event['requestType']
     store_id = event['storeId']
     customer_id = event['customerId']
-
-    response = {}
+    # write store_id & customer_id to the DynamoDB table using the object we instantiated and save response in a variable
+    response = table.put_item(
+        Item={
+            'storeId': store_id
+            'customerId':customer_id
+            })
+    # return a properly formatted JSON object
+    return {
+        'statusCode': 200,
+        'body': json.dumps('store is, ' + store_id + 'customer is'+ customer_id)
+    }
 
     # call function based on request type
     if request_type == "getStamps": 
