@@ -48,7 +48,7 @@ def add_stamps(store_id, customer_id, number_of_stamps):
     :param store_id: The StoreId of the store
     :param customer_id: The CustomerId of the customer
     :param number_of_stamps: The number of stamps to add
-    :return: TBD
+    :return: dictionary with HTTP response
     """
     get_response = table.get_item(Key={'StoreId': store_id, 'CustomerId': customer_id})
 
@@ -77,9 +77,25 @@ def reset_stamps(store_id, customer_id):
 
     :param store_id: The StoreId of the store
     :param customer_id: The CustomerId of the customer
-    :return: TBD
+    :return: dictionary with HTTP response
     """
-    return {}
+    get_response = table.get_item(Key={'StoreId': store_id, 'CustomerId': customer_id})
+
+    if 'Item' in get_response:
+        current_stamps = int(get_response['Item']['Stamps'])
+        update_response = table.update_item(
+            Key={'StoreId': store_id, 'CustomerId': customer_id},
+            UpdateExpression="set Stamps = :val",
+            ExpressionAttributeValues={':val': 0},
+            ReturnValues="UPDATED_NEW")
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Sucessfully reset stamps for StoreId: ' + store_id + ' and CustomerId: ' + customer_id)
+            }
+    return {
+    'statusCode': 200,
+    'body': json.dumps('Could not find record with StoreId: ' + store_id + ' and CustomerId: ' + customer_id)
+    }
 
 def delete_stamps(store_id, customer_id, number_of_stamps):
     """
@@ -88,9 +104,28 @@ def delete_stamps(store_id, customer_id, number_of_stamps):
     :param store_id: The StoreId of the store
     :param customer_id: The CustomerId of the customer
     :param number_of_stamps: The number of stamps to add
-    :return: TBD
+    :return: dictionary with HTTP response
     """
-    return {}
+    get_response = table.get_item(Key={'StoreId': store_id, 'CustomerId': customer_id})
+
+    if 'Item' in get_response:
+        current_stamps = int(get_response['Item']['Stamps'])
+
+        new_stamps = max(current_stamps - number_of_stamps, 0)
+
+        update_response = table.update_item(
+            Key={'StoreId': store_id, 'CustomerId': customer_id},
+            UpdateExpression="set Stamps = :val",
+            ExpressionAttributeValues={':val': new_stamps},
+            ReturnValues="UPDATED_NEW")
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Sucessfully deleted ' + str(number_of_stamps) + ' stamps for StoreId: ' + store_id + ' and CustomerId: ' + customer_id + '. New number of stamps: ' + str(new_stamps))
+            }
+    return {
+    'statusCode': 200,
+    'body': json.dumps('Could not find record with StoreId: ' + store_id + ' and CustomerId: ' + customer_id)
+    }
 
 # For local testing
 if __name__ == '__main__':
