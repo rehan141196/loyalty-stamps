@@ -12,8 +12,6 @@ def lambda_handler(event, context):
     store_id = event['storeId']
     customer_id = event['customerId']
 
-    response = {}
-
     # call function based on request type
     if request_type == "getStamps": 
         response = get_stamps(store_id, customer_id)
